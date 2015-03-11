@@ -18,4 +18,4 @@ char *jsonrpc_handler(const char *input, size_t input_len, struct jsonrpc_method
 
 json_t *jsonrpc_error_object(int code, const char *message, json_t *data);
 json_t *jsonrpc_error_object_predefined(int code, json_t *data);
-
+json_t* jsonrpc_notification(const char *method, json_t *params);
