@@ -6,3 +6,11 @@ It has been tested against ZeroMQ 3.2.2 and jansson 2.3.1
 
 
 Since significant functionality is provided by jansson library, the same licence is chosen to be used by this code.
+
+REMARKS
+=======
+Cloned from https://github.com/pijyoi/jsonrpc
+Changes:
+- Added method for creating notifications
+- Added stdout logging to test scripts
+

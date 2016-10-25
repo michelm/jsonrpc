@@ -20,10 +20,10 @@ clean:
 
 test:
 	$(CC) $(SOURCES) jsonrpc_server.c -o $(TESTBIN) -lzmq -ljansson
+	mkdir -p $(PREFIX)/bin
 	cp $(TESTBIN) $(PREFIX)/bin
 
 install: all
-	mkdir -p $(PREFIX)/bin
 	mkdir -p $(PREFIX)/lib
 	mkdir -p $(PREFIX)/include
 	ln -srf lib$(NAME).so.$(VERSION) lib$(NAME).so.0 

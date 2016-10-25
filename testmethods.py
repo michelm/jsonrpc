@@ -1,3 +1,4 @@
+import sys
 import zmq
 
 class JRPC:
@@ -22,21 +23,23 @@ zsock.connect("tcp://127.0.0.1:10000")
 
 jrpc = JRPC()
 
-# test "echo" method
+sys.stdout.write("test: 'echo' method  ... ")
 req = jrpc.make_req("echo", [10, 5])
 zsock.send_json(req)
 rep = zsock.recv_json()
 assert(rep['result']==req['params'])
+sys.stdout.write("[OK]\n")
 
-# test "counter" method and batch
+sys.stdout.write("test: 'counter' method  ... ")
 req = jrpc.make_req("counter")
 zsock.send_json([req]*10)
 batchrep = zsock.recv_json()
 counts = [rep['result'] for rep in batchrep]
 for k in range(1,len(counts)):
 	assert counts[k] - counts[k-1] == 1
+sys.stdout.write("[OK]\n")
 
-# test "sum" method and batch
+sys.stdout.write("test: 'sum' method and batch ... ")
 batchreq = []
 for k in range(10):
 	batchreq.append(jrpc.make_req("sum", range(1+k)))
@@ -44,29 +47,37 @@ zsock.send_json(batchreq)
 batchrep = zsock.recv_json()
 for k in range(10):
 	assert(batchrep[k]['result']==sum(range(1+k)))
+sys.stdout.write("[OK]\n")
 
+sys.stdout.write("test: iterate dictionary ... ")
 a = range(3)
 o = {1:1, 2:2, 3:3}
-
 d = { "one": "un", "two": 2, "three": 3.0, "four": True, "five": False, "six": None, "seven":a, "eight":o }
 req = jrpc.make_noti("iterate", d)
 zsock.send_json(req)
 rep = zsock.recv()
 assert not rep
+sys.stdout.write("[OK]\n")
 
+sys.stdout.write("test: iterate range(3) ... ")
 req = jrpc.make_noti("iterate", a)
 zsock.send_json(req)
 rep = zsock.recv()
 assert not rep
+sys.stdout.write("[OK]\n")
 
+sys.stdout.write("test: foreach dictionary ... ")
 req = jrpc.make_noti("foreach", d)
 zsock.send_json(req)
 rep = zsock.recv()
 assert not rep
+sys.stdout.write("[OK]\n")
 
+sys.stdout.write("test: foreach range(3) ... ")
 req = jrpc.make_noti("foreach", a)
 zsock.send_json(req)
 rep = zsock.recv()
 assert not rep
+sys.stdout.write("[OK]\n")
 
 
