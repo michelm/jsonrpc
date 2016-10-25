@@ -1,5 +1,8 @@
 #include <jansson.h>
 
+#ifndef _JSONRPC_H_
+#define _JSONRPC_H_
+
 #define JSONRPC_PARSE_ERROR -32700
 #define JSONRPC_INVALID_REQUEST -32600
 #define JSONRPC_METHOD_NOT_FOUND -32601
@@ -19,4 +22,6 @@ char *jsonrpc_handler(const char *input, size_t input_len, struct jsonrpc_method
 json_t *jsonrpc_error_object(int code, const char *message, json_t *data);
 json_t *jsonrpc_error_object_predefined(int code, json_t *data);
 json_t* jsonrpc_notification(const char *method, json_t *params);
+
+#endif /* _JSONRPC_H_ */
 
