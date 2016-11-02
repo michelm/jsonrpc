@@ -1,7 +1,7 @@
 PREFIX  ?= .
-CFLAGS  := -fPIC -O3 -g -Wall -Werror -I$(PREFIX)/include
-MAJOR   := 0
-MINOR   := 1
+CFLAGS  := -fPIC -O3 -g -Wall -Werror -I$(PREFIX)/include -I.
+MAJOR   := 1
+MINOR   := 0
 NAME    := jsonrpc
 VERSION := $(MAJOR).$(MINOR)
 SOURCES := jsonrpc.c jsonrpc_notify.c
@@ -16,7 +16,7 @@ lib$(NAME).so.$(VERSION): $(OBJECTS)
 	$(CC) -shared -Wl,-soname,lib$(NAME).so.$(MAJOR) $^ -o $@
 
 clean:
-	$(RM) *.o *.so*
+	$(RM) *.o *.so* *.la *.a *.dll
 
 test:
 	$(CC) $(SOURCES) jsonrpc_server.c -o $(TESTBIN) -lzmq -ljansson
