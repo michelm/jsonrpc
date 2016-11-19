@@ -26,10 +26,10 @@ test:
 install: all
 	mkdir -p $(PREFIX)/lib
 	mkdir -p $(PREFIX)/include
-	ln -srf lib$(NAME).so.$(VERSION) lib$(NAME).so.0 
+	ln -srf lib$(NAME).so.$(VERSION) lib$(NAME).so.$(MAJOR)
 	ln -srf lib$(NAME).so.$(VERSION) lib$(NAME).so
 	cp lib$(NAME).so.$(VERSION) $(PREFIX)/lib
-	mv lib$(NAME).so.0 $(PREFIX)/lib
+	mv lib$(NAME).so.$(MAJOR) $(PREFIX)/lib
 	mv lib$(NAME).so $(PREFIX)/lib
 	cp *.h $(PREFIX)/include
 
