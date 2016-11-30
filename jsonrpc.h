@@ -17,7 +17,7 @@ struct jsonrpc_method_entry_t
 	const char *params_spec;
 };
 char *jsonrpc_handler(const char *input, size_t input_len, struct jsonrpc_method_entry_t method_table[],
-	void *userdata);
+	size_t flags, void *userdata);
 
 json_t *jsonrpc_error_object(int code, const char *message, json_t *data);
 json_t *jsonrpc_error_object_predefined(int code, json_t *data);

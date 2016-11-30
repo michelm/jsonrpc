@@ -240,7 +240,7 @@ done:
 }
 
 char *jsonrpc_handler(const char *input, size_t input_len, struct jsonrpc_method_entry_t method_table[],
-	void *userdata)
+	size_t flags, void *userdata)
 {
 	json_t *json_request, *json_response;
 	json_error_t error;
@@ -273,7 +273,7 @@ char *jsonrpc_handler(const char *input, size_t input_len, struct jsonrpc_method
 	}
 
 	if (json_response)
-		output = json_dumps(json_response, JSON_INDENT(2));
+		output = json_dumps(json_response, flags);
 
 	json_decref(json_request);
 	json_decref(json_response);
