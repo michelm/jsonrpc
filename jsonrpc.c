@@ -2,18 +2,19 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include <jansson.h>
 #include "jsonrpc.h"
 
-json_t *jsonrpc_error_object(int code, const char *message, json_t *data)
-{
+json_t *jsonrpc_error_object(int code, const char *message, json_t *data) {
 	/* reference to data is stolen */
 
 	json_t *json;
 
-	if (!message)
+	if (!message) {
 		message = "";
+	}
 
 	json = json_pack("{s:i,s:s}", "code", code, "message", message);
 	if (data) {
@@ -22,8 +23,7 @@ json_t *jsonrpc_error_object(int code, const char *message, json_t *data)
 	return json;
 }
 
-json_t *jsonrpc_error_object_predefined(int code, json_t *data)
-{
+json_t *jsonrpc_error_object_predefined(int code, json_t *data) {
 	/* reference to data is stolen */
 
 	const char *message = "";
@@ -51,81 +51,61 @@ json_t *jsonrpc_error_object_predefined(int code, json_t *data)
 	return jsonrpc_error_object(code, message, data);
 }
 
-json_t *jsonrpc_error_response(json_t *json_id, json_t *json_error)
-{
-	/* json_error reference is stolen */
+json_t *jsonrpc_error_response(json_t *id, json_t *error) {
+	/* error reference is stolen */
 
-	json_t * response;
-
-	/* json_id could be NULL */
-	if (json_id) {
-		json_incref(json_id);
-	} else {
-		json_id = json_null();
+	if (id) {
+		json_incref(id);
+	}
+	else {
+		id = json_null();
 	}
 
-	json_error = json_error ? json_error : json_null();
+	error = error ? error : json_null();
 
-	response = json_pack("{s:s,s:o,s:o}",
-		"jsonrpc", "2.0",
-		"id", json_id,
-		"error", json_error);
-	return response;
+	return json_pack("{s:s,s:o,s:o}", "jsonrpc", "2.0", "id", id, "error", error);
 }
 
-json_t *jsonrpc_result_response(json_t *json_id, json_t *json_result)
-{
-	/*  json_result reference is stolen */
+json_t *jsonrpc_result_response(json_t *id, json_t *result) {
+	/*  result reference is stolen */
 
-	json_t * response;
-
-	/*  json_id shouldn't be NULL */
-	if (json_id) {
-		json_incref(json_id);
-	} else {
-		json_id = json_null();
+	if (id) {
+		json_incref(id);
+	}
+	else {
+		id = json_null();
 	}
 
-	json_result = json_result ? json_result : json_null();
+	result = result ? result : json_null();
 
-	response = json_pack("{s:s,s:o,s:o}",
-		"jsonrpc", "2.0",
-		"id", json_id,
-		"result", json_result);
-	return response;
+	return json_pack("{s:s,s:o,s:o}", "jsonrpc", "2.0", "id", id, "result", result);
 }
 
-json_t *jsonrpc_validate_request(json_t *json_request, const char **str_method, json_t **json_params, json_t **json_id)
-{
+json_t *jsonrpc_validate_request(json_t *request, const char **method, json_t **params, json_t **id) {
 	size_t flags = 0;
 	json_error_t error;
-	const char *str_version = NULL;
+	const char *version = NULL;
 	int rc;
 	json_t *data = NULL;
 	int valid_id = 0;
 
-	*str_method = NULL;
-	*json_params = NULL;
-	*json_id = NULL;
+	*method = NULL;
+	*params = NULL;
+	*id = NULL;
 
-	rc = json_unpack_ex(json_request, &error, flags, "{s:s,s:s,s?o,s?o}",
-		"jsonrpc", &str_version,
-		"method", str_method,
-		"params", json_params,
-		"id", json_id
-	);
+	rc = json_unpack_ex(request, &error, flags, "{s:s,s:s,s?o,s?o}", "jsonrpc", &version, "method", method, "params", params, "id", id);
 	if (rc==-1) {
 		data = json_string(error.text);
 		goto invalid;
 	}
 
-	if (0!=strcmp(str_version, "2.0")) {
+	if ( strcmp(version, "2.0") ) {
 		data = json_string("\"jsonrpc\" MUST be exactly \"2.0\"");
 		goto invalid;
 	}
 
-	if (*json_id) {
-		if (!json_is_string(*json_id) && !json_is_number(*json_id) && !json_is_null(*json_id)) {
+	if (*id) {
+		if ( !json_is_string(*id) && !json_is_number(*id) && !json_is_null(*id) ) {
 			data = json_string("\"id\" MUST contain a String, Number, or NULL value if included");
 			goto invalid;
 		}
@@ -135,8 +115,8 @@ json_t *jsonrpc_validate_request(json_t *json_request, const char **str_method, 
 	/*  otherwise we would be returning a non-compliant response ourselves! */
 	valid_id = 1;
 
-	if (*json_params) {
-		if (!json_is_array(*json_params) && !json_is_object(*json_params)) {
+	if (*params) {
+		if ( !json_is_array(*params) && !json_is_object(*params) ) {
 			data = json_string("\"params\" MUST be Array or Object if included");
 			goto invalid;
 		}
@@ -145,30 +125,33 @@ json_t *jsonrpc_validate_request(json_t *json_request, const char **str_method, 
 	return NULL;
 
 invalid:
-	if (!valid_id)
-		*json_id = NULL;
-	return jsonrpc_error_response(*json_id,
-		jsonrpc_error_object_predefined(JSONRPC_INVALID_REQUEST, data));
+	if (!valid_id) {
+		*id = NULL;
+	}
+	return jsonrpc_error_response(*id, jsonrpc_error_object_predefined(JSONRPC_INVALID_REQUEST, data));
 }
 
-json_t *jsonrpc_validate_params(json_t *json_params, const char *params_spec)
-{
+json_t *jsonrpc_validate_params(json_t *params, const char *spec) {
 	json_t *data = NULL;
 
-	if (strlen(params_spec)==0) {	/*  empty string means no arguments */
-		if (!json_params) {
+	if ( !strlen(spec) ) {	/* empty string means no arguments */
+		if (!params) {
 			/*  no params field: OK */
-		} else if (json_is_array(json_params) && json_array_size(json_params)==0) {
+		}
+		else if ( json_is_array(params) && json_array_size(params)==0) {
 			/*  an empty Array: OK */
-		} else {
+		}
+		else {
 			data = json_string("method takes no arguments");
 		}
-	} else if (!json_params) {		/*  non-empty string but no params field */
+	}
+	else if (!params) {	/* non-empty string but no params field */
 		data = json_string("method takes arguments but params field missing");
-	} else {					/*  non-empty string and have params field */
+	}
+	else { /* non-empty string and have params field */
 		size_t flags = JSON_VALIDATE_ONLY;
 		json_error_t error;
-		int rc = json_unpack_ex(json_params, &error, flags, params_spec);
+		int rc = json_unpack_ex(params, &error, flags, spec);
 		if (rc==-1) {
 			data = json_string(error.text);
 		}
@@ -177,107 +160,111 @@ json_t *jsonrpc_validate_params(json_t *json_params, const char *params_spec)
 	return data ? jsonrpc_error_object_predefined(JSONRPC_INVALID_PARAMS, data) : NULL;
 }
 
-json_t *jsonrpc_handle_request_single(json_t *json_request, struct jsonrpc_method_entry_t method_table[],
-	void *userdata)
-{
+json_t *jsonrpc_handle_request_single(json_t *request, jsonrpc_method_t methods[], void *userdata) {
 	int rc;
-	json_t *json_response;
-	const char *str_method;
-	json_t *json_params, *json_id;
-	json_t *json_result;
-	int is_notification;
-	struct jsonrpc_method_entry_t *entry;
+	json_t *response;
+	const char *name;
+	json_t *params, *id;
+	json_t *result;
+	bool is_notification;
+	jsonrpc_method_t *method;
 
-	json_response = jsonrpc_validate_request(json_request, &str_method, &json_params, &json_id);
-	if (json_response)
-		return json_response;
-
-	is_notification = json_id==NULL;
-
-
-	for (entry=method_table; entry->name!=NULL; entry++) {
-		if (0==strcmp(entry->name, str_method))
-			break;
+	response = jsonrpc_validate_request(request, &name, &params, &id);
+	if (response) {
+		return response;
 	}
-	if (entry->name==NULL) {
-		json_response = jsonrpc_error_response(json_id,
-				jsonrpc_error_object_predefined(JSONRPC_METHOD_NOT_FOUND, NULL));
+
+	is_notification = (NULL==id ? true : false);
+
+	for (method=methods; method->name!=NULL; method++) {
+		if ( 0==strcmp(method->name, name) ) {
+			break;
+		}
+	}
+
+	if (method->name==NULL) {
+		response = jsonrpc_error_response(id, jsonrpc_error_object_predefined(JSONRPC_METHOD_NOT_FOUND, NULL));
 		goto done;
 	}
 
-	if (entry->params_spec) {
-		json_t *error_obj = jsonrpc_validate_params(json_params, entry->params_spec);
-		if (error_obj) {
-			json_response = jsonrpc_error_response(json_id, error_obj);
+	if (method->params_spec) {
+		json_t *error = jsonrpc_validate_params(params, method->params_spec);
+		if (error) {
+			response = jsonrpc_error_response(id, error);
 			goto done;
 		}
 	}
 
-	json_response = NULL;
-	json_result = NULL;
-	rc = entry->funcptr(json_params, &json_result, userdata);
+	response = NULL;
+	result = NULL;
+	rc = method->func(params, &result, userdata);
+
 	if (is_notification) {
-		json_decref(json_result);
-		json_result = NULL;
-	} else {
+		json_decref(result);
+		result = NULL;
+	}
+	else {
 		if (rc==0) {
-			json_response = jsonrpc_result_response(json_id, json_result);
-		} else {
-			if (!json_result) {
+			response = jsonrpc_result_response(id, result);
+		}
+		else {
+			if (!result) {
 				/* method did not set a jsonrpc_error_object, create a generic error */
-				json_result = jsonrpc_error_object_predefined(JSONRPC_INTERNAL_ERROR, NULL);
+				result = jsonrpc_error_object_predefined(JSONRPC_INTERNAL_ERROR, NULL);
 			}
-			json_response = jsonrpc_error_response(json_id, json_result);
+			response = jsonrpc_error_response(id, result);
 		}
 	}
 
 done:
-	if (is_notification && json_response) {
-		json_decref(json_response);
-		json_response = NULL;
+	if (is_notification && response) {
+		json_decref(response);
+		response = NULL;
 	}
-	return json_response;
+	return response;
 }
 
-char *jsonrpc_handler(const char *input, size_t input_len, struct jsonrpc_method_entry_t method_table[],
-	size_t flags, void *userdata)
-{
-	json_t *json_request, *json_response;
+char *jsonrpc_handler(const char *msg, const size_t len, jsonrpc_method_t methods[], size_t flags, void *userdata) {
+	size_t k, size;
+	json_t *request=NULL, *response=NULL, *req, *rep;
 	json_error_t error;
 	char *output = NULL;
 
-	json_request = json_loadb(input, input_len, 0, &error);
-	if (!json_request) {
-		json_response = jsonrpc_error_response(NULL,
-				jsonrpc_error_object_predefined(JSONRPC_PARSE_ERROR, NULL));
-	} else if json_is_array(json_request) {
-		size_t len = json_array_size(json_request);
-		if (len==0) {
-			json_response = jsonrpc_error_response(NULL,
-					jsonrpc_error_object_predefined(JSONRPC_INVALID_REQUEST, NULL));
-		} else {
-			size_t k;
-			json_response = NULL;
-			for (k=0; k < len; k++) {
-				json_t *req = json_array_get(json_request, k);
-				json_t *rep = jsonrpc_handle_request_single(req, method_table, userdata);
+	request = json_loadb(msg, len, 0, &error);
+	if (!request) {
+		response = jsonrpc_error_response(NULL, jsonrpc_error_object_predefined(JSONRPC_PARSE_ERROR, NULL));
+	}
+	else if json_is_array(request) {
+		size = json_array_size(request);
+		if (size==0) {
+			response = jsonrpc_error_response(NULL, jsonrpc_error_object_predefined(JSONRPC_INVALID_REQUEST, NULL));
+		}
+		else {
+			response = NULL;
+			for (k=0; k < size; k++) {
+				req = json_array_get(request, k);
+				rep = jsonrpc_handle_request_single(req, methods, userdata);
 				if (rep) {
-					if (!json_response)
-						json_response = json_array();
-					json_array_append_new(json_response, rep);
+					if (!response) {
+						response = json_array();
+					}
+					json_array_append_new(response, rep);
 				}
 			}
 		}
-	} else {
-		json_response = jsonrpc_handle_request_single(json_request, method_table, userdata);
+	}
+	else {
+		response = jsonrpc_handle_request_single(request, methods, userdata);
 	}
 
-	if (json_response)
-		output = json_dumps(json_response, flags);
+	if (response) {
+		output = json_dumps(response, flags);
+		json_decref(response);
+	}
 
-	json_decref(json_request);
-	json_decref(json_response);
-
+	if (request) {
+		json_decref(request);
+	}
 	return output;
 }
 

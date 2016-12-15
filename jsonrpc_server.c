@@ -4,13 +4,11 @@
 #include <zmq.h>
 #include "jsonrpc.h"
 
-struct user_context_t
-{
+struct user_context_t {
 	int count;
 };
 
-static char *json_value_as_string(json_t *value)
-{
+static char *json_value_as_string(json_t *value) {
 	// caller to free the returned string
 
 	char buffer[64];
@@ -19,31 +17,36 @@ static char *json_value_as_string(json_t *value)
 		case JSON_OBJECT:
 		case JSON_ARRAY:
 			return json_dumps(value, JSON_COMPACT);
+
 		case JSON_STRING:
 			return strdup(json_string_value(value));
+
 		case JSON_INTEGER:
 			snprintf(buffer, sizeof(buffer), "%" JSON_INTEGER_FORMAT, json_integer_value(value));
 			return strdup(buffer);
+
 		case JSON_REAL:
 			snprintf(buffer, sizeof(buffer), "%f", json_real_value(value));
 			return strdup(buffer);
+
 		case JSON_TRUE:
 			return strdup("True");
+
 		case JSON_FALSE:
 			return strdup("False");
+
 		case JSON_NULL:
 			return strdup("None");
 	}
 	assert(0);
 }
 
-static int method_test_foreach(json_t *json_params, json_t **result, void *userdata)
-{
-	if (json_is_array(json_params)) {
+static int method_test_foreach(json_t *params, json_t **result, void *userdata) {
+	if (json_is_array(params)) {
 #if JANSSON_VERSION_HEX >= 0x020500
 		size_t index;
 		json_t *value;
-		json_array_foreach(json_params, index, value) {
+		json_array_foreach(params, index, value) {
 			char *str = json_value_as_string(value);
 			printf("%ld: %s\n", index, str);
 			free(str);
@@ -51,37 +54,38 @@ static int method_test_foreach(json_t *json_params, json_t **result, void *userd
 #else
 		printf("JSON_ARRAY_FOREACH unsupported\n");
 #endif
-	} else if (json_is_object(json_params)) {
+	} 
+	else if (json_is_object(params)) {
 		const char *key;
 		json_t *value;
-		json_object_foreach(json_params, key, value) {
+		json_object_foreach(params, key, value) {
 			char *str = json_value_as_string(value);
 			printf("%s: %s\n", key, str);
 			free(str);
 		}
-	} else {
+	}
+	else {
 		assert(0);
 	}
 
 	return 0;
 }
 
-static int method_test_iter(json_t *json_params, json_t **result, void *userdata)
-{
-	if (json_is_array(json_params)) {
-		size_t len = json_array_size(json_params);
+static int method_test_iter(json_t *params, json_t **result, void *userdata) {
+	if (json_is_array(params)) {
+		size_t len = json_array_size(params);
 		size_t idx;
 		for (idx = 0; idx < len; idx++) {
-			json_t *value = json_array_get(json_params, idx);
+			json_t *value = json_array_get(params, idx);
 
 			char *str = json_value_as_string(value);
 			printf("%ld: %s\n", idx, str);
 			free(str);
 		}
-	} else if (json_is_object(json_params)) {
-		void *iter = json_object_iter(json_params);
-		while (iter)
-		{
+	}
+	else if (json_is_object(params)) {
+		void *iter = json_object_iter(params);
+		while (iter) {
 			const char *key = json_object_iter_key(iter);
 			json_t *value = json_object_iter_value(iter);
 
@@ -89,58 +93,55 @@ static int method_test_iter(json_t *json_params, json_t **result, void *userdata
 			printf("%s: %s\n", key, str);
 			free(str);
 
-			iter = json_object_iter_next(json_params, iter);
+			iter = json_object_iter_next(params, iter);
 		}
-	} else {
+	}
+	else {
 		assert(0);
 	}
 
 	return 0;
 }
 
-static int method_test_apperror(json_t *json_params, json_t **result, void *userdata)
-{
+static int method_test_apperror(json_t *params, json_t **result, void *userdata) {
 	/* on error, you can do one of the following: 
 		return -1 and leave result unset
 		return -1 and set result to a proper jsonrpc_error_object
 	*/
 
 	/* example of how to return an application-defined error */
-	*result = jsonrpc_error_object(-12345, "application defined error",
-		json_string("additional information"));
-
+	*result = jsonrpc_error_object(-12345, "application defined error", json_string("additional information"));
 	return -1;
 }
 
-static int method_echo(json_t *json_params, json_t **result, void *userdata)
-{
-	json_incref(json_params);
-	*result = json_params;
+static int method_echo(json_t *params, json_t **result, void *userdata) {
+	json_incref(params);
+	*result = params;
 	return 0;
 }
 
-static int method_counter(json_t *json_params, json_t **result, void *userdata)
-{
+static int method_counter(json_t *params, json_t **result, void *userdata) {
 	struct user_context_t *userctx = (struct user_context_t *)userdata;
 	userctx->count++;
 	*result = json_integer(userctx->count);
 	return 0;
 }
 
-static int method_subtract(json_t *json_params, json_t **result, void *userdata)
-{
+static int method_subtract(json_t *params, json_t **result, void *userdata) {
 	size_t flags = 0;
 	json_error_t error;
 	double x, y;
 	int rc;
 	
-	if (json_is_array(json_params)) {
-		rc = json_unpack_ex(json_params, &error, flags, "[FF!]", &x, &y);
-	} else if (json_is_object(json_params)) {
-		rc = json_unpack_ex(json_params, &error, flags, "{s:F,s:F}",
+	if (json_is_array(params)) {
+		rc = json_unpack_ex(params, &error, flags, "[FF!]", &x, &y);
+	} 
+	else if (json_is_object(params)) {
+		rc = json_unpack_ex(params, &error, flags, "{s:F,s:F}",
 			"minuend", &x, "subtrahend", &y
 		);
-	} else {
+	}
+	else {
 		assert(0);
 	}
 
@@ -153,20 +154,19 @@ static int method_subtract(json_t *json_params, json_t **result, void *userdata)
 	return 0;
 }
 
-static int method_sum(json_t *json_params, json_t **result, void *userdata)
-{
+static int method_sum(json_t *params, json_t **result, void *userdata) {
 	double total = 0;
-	size_t len = json_array_size(json_params);
+	size_t len = json_array_size(params);
 	int k;
 	for (k=0; k < len; k++) {
-		double value = json_number_value(json_array_get(json_params, k));
+		double value = json_number_value(json_array_get(params, k));
 		total += value;
 	}
 	*result = json_real(total);
 	return 0;
 }
 
-static struct jsonrpc_method_entry_t method_table[] = {
+static jsonrpc_method_t methods[] = {
 	{ "foreach", method_test_foreach, "o" },
 	{ "iterate", method_test_iter, "o" },
 	{ "apperror", method_test_apperror, "" },
@@ -177,8 +177,7 @@ static struct jsonrpc_method_entry_t method_table[] = {
 	{ NULL },
 };
 
-int main()
-{
+int main() {
 	void *ctx = zmq_ctx_new();
 	void *sock = zmq_socket(ctx, ZMQ_REP);
 	int rc = zmq_bind(sock, "tcp://127.0.0.1:10000");
@@ -186,14 +185,12 @@ int main()
 
 	struct user_context_t userctx = {0};
 	
-	while (1) 
-	{
+	while (1) {
 		zmq_msg_t msg;
 		zmq_msg_init(&msg);
 		zmq_msg_recv(&msg, sock, 0);
 
-		char *output = jsonrpc_handler((char *)zmq_msg_data(&msg), 
-				zmq_msg_size(&msg), method_table, &userctx);
+		char *output = jsonrpc_handler((char *)zmq_msg_data(&msg), zmq_msg_size(&msg), methods, 0, &userctx);
 
 		zmq_msg_close(&msg);
 
@@ -207,6 +204,6 @@ int main()
 	
 	zmq_close(sock);
 	zmq_ctx_destroy(ctx);
-	
 	return 0;
 }
+
