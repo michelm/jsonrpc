@@ -1,7 +1,7 @@
 PREFIX  ?= .
 CFLAGS  := -fPIC -O3 -g -Wall -Werror -I$(PREFIX)/include -I.
 MAJOR   := 1
-MINOR   := 0
+MINOR   := 1
 NAME    := jsonrpc
 VERSION := $(MAJOR).$(MINOR)
 SOURCES := jsonrpc.c jsonrpc_notify.c
