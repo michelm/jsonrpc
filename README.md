@@ -13,4 +13,7 @@ Cloned from https://github.com/pijyoi/jsonrpc
 Changes:
 - Added method for creating notifications
 - Added stdout logging to test scripts
+- Added client support; i.e. receive and process JSONRPC responses
+- Use static and/or shared libraries
+- Added MinGW support
 

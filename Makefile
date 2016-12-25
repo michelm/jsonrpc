@@ -4,16 +4,21 @@ MAJOR   := 1
 MINOR   := 1
 NAME    := jsonrpc
 VERSION := $(MAJOR).$(MINOR)
-SOURCES := jsonrpc.c jsonrpc_notify.c
+SOURCES := jsonrpc.c
 OBJECTS := $(SOURCES:.c=.o)
 TESTBIN := jsonrpc_test
+SHLIB	:= lib$(NAME).so.$(VERSION)
+STLIB	:= lib$(NAME).a
 
-lib: lib$(NAME).so.$(VERSION)
+shlib: $(SHLIB)
 
-all: lib
+stlib: $(STLIB)
 
-lib$(NAME).so.$(VERSION): $(OBJECTS)
+$(SHLIB): $(OBJECTS)
 	$(CC) -shared -Wl,-soname,lib$(NAME).so.$(MAJOR) $^ -o $@
+
+$(STLIB): $(OBJECTS)
+	$(AR) rcs $@ $^
 
 clean:
 	$(RM) *.o *.so* *.la *.a *.dll
@@ -23,13 +28,24 @@ test:
 	mkdir -p $(PREFIX)/bin
 	cp $(TESTBIN) $(PREFIX)/bin
 
-install: all
+all: shlib stlib
+
+install_shlib: shlib
 	mkdir -p $(PREFIX)/lib
 	mkdir -p $(PREFIX)/include
-	ln -srf lib$(NAME).so.$(VERSION) lib$(NAME).so.$(MAJOR)
-	ln -srf lib$(NAME).so.$(VERSION) lib$(NAME).so
-	cp lib$(NAME).so.$(VERSION) $(PREFIX)/lib
+	cp *.h $(PREFIX)/include
+	ln -srf $(SHLIB) lib$(NAME).so.$(MAJOR)
+	ln -srf $(SHLIB) lib$(NAME).so
+	cp $(SHLIB) $(PREFIX)/lib
 	mv lib$(NAME).so.$(MAJOR) $(PREFIX)/lib
 	mv lib$(NAME).so $(PREFIX)/lib
+
+install_stlib: stlib
+	mkdir -p $(PREFIX)/lib
+	mkdir -p $(PREFIX)/include
 	cp *.h $(PREFIX)/include
+	cp $(STLIB) $(PREFIX)/lib
+
+install: install_shlib install_stlib
+	
 
