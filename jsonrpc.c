@@ -81,6 +81,27 @@ json_t *jsonrpc_result_response(json_t *id, json_t *result) {
 	return json_pack("{s:s,s:o,s:o}", "jsonrpc", "2.0", "id", id, "result", result);
 }
 
+int jsonrpc_validate_response(json_t *request, json_t **id, json_t **result) {
+	int rc;
+	size_t flags = 0;
+	const char *version = NULL;
+
+	rc = json_unpack_ex(request, NULL, flags, "{s:s,s:o,s:o}", "jsonrpc", &version, "result", result, "id", id);
+	if (rc == -1) {
+		return -1; // not a valid response
+	}
+
+	if ( strcmp(version, "2.0") ) {
+		return 0; // is a response, but unsupported version
+	}
+
+	if ( !json_is_integer(*id) ) {
+		return 0; // is a response, but identifier must be number
+	}
+
+	return 1; // valid response
+}
+
 json_t *jsonrpc_validate_request(json_t *request, const char **method, json_t **params, json_t **id) {
 	size_t flags = 0;
 	json_error_t error;
@@ -160,7 +181,7 @@ json_t *jsonrpc_validate_params(json_t *params, const char *spec) {
 	return data ? jsonrpc_error_object_predefined(JSONRPC_INVALID_PARAMS, data) : NULL;
 }
 
-json_t *jsonrpc_handle_request_single(json_t *request, jsonrpc_method_t methods[], void *userdata) {
+json_t *jsonrpc_handle_request_single(json_t *request, jsonrpc_method_t methods[], void *userdata, jsonrpc_response_f response_handler) {
 	int rc;
 	json_t *response;
 	const char *name;
@@ -168,6 +189,14 @@ json_t *jsonrpc_handle_request_single(json_t *request, jsonrpc_method_t methods[
 	json_t *result;
 	bool is_notification;
 	jsonrpc_method_t *method;
+
+	rc = jsonrpc_validate_response(request, &id, &result);
+	if (rc >= 0) {
+		if (rc == 1 && result && id) {
+			response_handler(result, json_integer_value(id), userdata);
+		}
+		return NULL;
+	}
 
 	response = jsonrpc_validate_request(request, &name, &params, &id);
 	if (response) {
@@ -224,7 +253,7 @@ done:
 	return response;
 }
 
-char *jsonrpc_handler(const char *msg, const size_t len, jsonrpc_method_t methods[], size_t flags, void *userdata) {
+char *jsonrpc_handler(const char *msg, const size_t len, jsonrpc_method_t methods[], size_t flags, void *userdata, jsonrpc_response_f response_handler) {
 	size_t k, size;
 	json_t *request=NULL, *response=NULL, *req, *rep;
 	json_error_t error;
@@ -243,7 +272,7 @@ char *jsonrpc_handler(const char *msg, const size_t len, jsonrpc_method_t method
 			response = NULL;
 			for (k=0; k < size; k++) {
 				req = json_array_get(request, k);
-				rep = jsonrpc_handle_request_single(req, methods, userdata);
+				rep = jsonrpc_handle_request_single(req, methods, userdata, response_handler);
 				if (rep) {
 					if (!response) {
 						response = json_array();
@@ -254,7 +283,7 @@ char *jsonrpc_handler(const char *msg, const size_t len, jsonrpc_method_t method
 		}
 	}
 	else {
-		response = jsonrpc_handle_request_single(request, methods, userdata);
+		response = jsonrpc_handle_request_single(request, methods, userdata, response_handler);
 	}
 
 	if (response) {
