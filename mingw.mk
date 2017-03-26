@@ -1,5 +1,5 @@
 PREFIX  	?= .
-CFLAGS  	:= -fPIC -O3 -g -Wall -Werror -I$(PREFIX)/include -I.
+CFLAGS  	:= -O3 -g -Wall -I$(PREFIX)/include -I.
 LINKFLAGS 	:= -L$(PREFIX)/bin -ljansson-4
 MAJOR   	:= 1
 NAME    	:= jsonrpc
