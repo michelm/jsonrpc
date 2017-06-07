@@ -32,7 +32,7 @@ install_shlib:
 	cp $(SHLIB) $(PREFIX)/bin
 
 install_stlib:
-	mkdir -p $(PREFIX)/bin
+	mkdir -p $(PREFIX)/lib
 	mkdir -p $(PREFIX)/include
 	cp *.h $(PREFIX)/include
 	cp $(STLIB) $(PREFIX)/lib
